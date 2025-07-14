@@ -1,30 +1,38 @@
-name: Guardar Respuesta
+name: Guardar respuesta
 
 on:
-  push:
-    paths:
-      - 'responses-temp.json'
+  repository_dispatch:
+    types: [nueva-respuesta]
 
 jobs:
-  actualizar-archivo:
+  actualizar-respuestas:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+    - name: Clonar repositorio
+      uses: actions/checkout@v3
 
-      - name: Obtener contenido temporal
-        run: |
-          TEMP_FILE="responses-temp.json"
-          if [ -f "$TEMP_FILE" ]; then
-            cat $TEMP_FILE > responses.json
-          else
-            echo "[]" > responses.json
-          fi
+    - name: Configurar Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 16
 
-      - name: Commit final en responses.json
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "Actualizar responses.json"
-          file_pattern: responses.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+    - name: Agregar nueva respuesta
+      run: |
+        echo "Agregando nueva respuesta..."
+
+        FILE="responses.json"
+        TEMP="temp.json"
+        NOMBRE="${{ github.event.client_payload.datos.nombre }}"
+        EDAD="${{ github.event.client_payload.datos.edad }}"
+        FECHA="${{ github.event.client_payload.datos.fecha }}"
+
+        jq --arg nombre "$NOMBRE" --arg edad "$EDAD" --arg fecha "$FECHA" \
+          '. += [{"nombre": $nombre, "edad": $edad, "fecha": $fecha}]' "$FILE" > "$TEMP"
+        mv "$TEMP" "$FILE"
+
+    - name: Commit y push
+      uses: stefanzweifel/git-auto-commit-action@v5
+      with:
+        commit_message: "Agregar nueva respuesta"
+        branch: main
