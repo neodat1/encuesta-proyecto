@@ -1,37 +1,33 @@
-name: Guardar respuesta de encuesta
+name: Guardar respuestas de encuesta
 
 on:
   issues:
     types: [opened]
 
 jobs:
-  agregar-respuesta:
+  guardar-respuesta:
     runs-on: ubuntu-latest
     steps:
-      - name: Clonar repo
-        uses: actions/checkout@v4
+      - name: Clonar repositorio
+        uses: actions/checkout@v3
 
-      - name: Agregar respuesta a responses.json
+      - name: Leer respuestas actuales
+        id: leer
         run: |
-          echo "Agregando nueva respuesta..."
-          # Extraer datos del issue
-          RESPUESTA=$(jq -r .issue.body "$GITHUB_EVENT_PATH")
-          # Leer archivo actual (o crear vacío)
-          if [ -f responses.json ]; then
-            jq ". += [$RESPUESTA]" responses.json > temp.json
-          else
-            echo "[]" > responses.json
-            jq ". += [$RESPUESTA]" responses.json > temp.json
-          fi
-          mv temp.json responses.json
+          if [ ! -f responses.json ]; then echo "[]" > responses.json; fi
+          cat responses.json
 
-      - name: Hacer commit y push
+      - name: Añadir respuesta del Issue
+        id: agregar
+        run: |
+          NOMBRE=$(echo "${{ github.event.issue.body }}" | grep 'Nombre:' | sed 's/Nombre: //')
+          EDAD=$(echo "${{ github.event.issue.body }}" | grep 'Edad:' | sed 's/Edad: //')
+          FECHA=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          jq ". + [{\"nombre\": \"$NOMBRE\", \"edad\": \"$EDAD\", \"fecha\": \"$FECHA\"}]" responses.json > tmp.json && mv tmp.json responses.json
+
+      - name: Commit respuestas
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Agregar respuesta desde issue"
-          branch: main
-
-      - name: Cerrar issue
-        uses: peter-evans/close-issue@v3
-        with:
-          issue-number: ${{ github.event.issue.number }}
+          commit_message: "Agregar respuesta desde Issue #${{ github.event.issue.number }}"
+          branch: ${{ github.ref }}
+          file_pattern: responses.json
