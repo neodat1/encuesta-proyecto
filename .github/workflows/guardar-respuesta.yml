@@ -1,36 +1,37 @@
-name: Guardar respuestas de encuesta
+name: Guardar respuesta de encuesta
 
 on:
-  push:
-    paths:
-      - responses-temp.json
+  issues:
+    types: [opened]
 
 jobs:
-  actualizar-respuestas:
+  agregar-respuesta:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Clonar repositorio
-        uses: actions/checkout@v3
+      - name: Clonar repo
+        uses: actions/checkout@v4
 
-      - name: Leer archivo temporal y combinar con respuestas.json
+      - name: Agregar respuesta a responses.json
         run: |
-          echo "📥 Cargando respuesta temporal..."
-          cat responses-temp.json
-
-          echo "📁 Asegurando existencia de responses.json"
-          if [ ! -f responses.json ]; then
+          echo "Agregando nueva respuesta..."
+          # Extraer datos del issue
+          RESPUESTA=$(jq -r .issue.body "$GITHUB_EVENT_PATH")
+          # Leer archivo actual (o crear vacío)
+          if [ -f responses.json ]; then
+            jq ". += [$RESPUESTA]" responses.json > temp.json
+          else
             echo "[]" > responses.json
+            jq ". += [$RESPUESTA]" responses.json > temp.json
           fi
+          mv temp.json responses.json
 
-          echo "📦 Fusionando datos..."
-          jq -s '.[0] as $new | .[1] + [$new]' responses-temp.json responses.json > merged.json
-          mv merged.json responses.json
-
-          echo "🧹 Eliminando temporal..."
-          rm responses-temp.json
-
-      - name: Subir cambios
+      - name: Hacer commit y push
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "Nueva respuesta guardada automáticamente"
+          commit_message: "Agregar respuesta desde issue"
+          branch: main
+
+      - name: Cerrar issue
+        uses: peter-evans/close-issue@v3
+        with:
+          issue-number: ${{ github.event.issue.number }}
