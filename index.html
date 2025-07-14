@@ -6,39 +6,22 @@
 </head>
 <body>
     <h1>Encuesta</h1>
-    <form id="formulario">
+    <form id="formulario" action="https://github.com/neodat1/encuesta-proyecto/issues/new" method="GET" target="_blank">
+        <input type="hidden" name="title" id="title">
+        <input type="hidden" name="body" id="body">
         <label>Nombre: <input type="text" name="nombre" required></label><br><br>
         <label>Edad: <input type="number" name="edad" required></label><br><br>
         <button type="submit">Enviar</button>
     </form>
+
     <script>
-      document.getElementById('formulario').addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const datos = {
-          nombre: this.nombre.value,
-          edad: this.edad.value,
-          fecha: new Date().toISOString()
-        };
-        const title = `Nueva respuesta de ${datos.nombre}`;
-        const body = JSON.stringify(datos, null, 2);
-
-        const repo = "neodat1/encuesta-proyecto";
-        const url = `https://api.github.com/repos/${repo}/issues`;
-        // Aquí no hay token. Si quiere hacer pruebas como usuario autenticado, use un token solo en local.
-
-        await fetch(url, {
-          method: "POST",
-          headers: {
-            "Accept": "application/vnd.github.v3+json"
-            // Si desea probar como dueño del repo, agregue: , "Authorization": "token SU_TOKEN"
-          },
-          body: JSON.stringify({title, body})
-        })
-        .then(res => {
-            if(res.ok) alert("¡Respuesta enviada! Se guardará en unos segundos.");
-            else alert("Error enviando respuesta (verifique que los issues están habilitados)");
-        });
-      });
+    document.getElementById('formulario').addEventListener('submit', function(e) {
+        var nombre = document.querySelector('[name=nombre]').value;
+        var edad = document.querySelector('[name=edad]').value;
+        document.getElementById('title').value = `Encuesta: ${nombre}`;
+        document.getElementById('body').value = `Nombre: ${nombre}\nEdad: ${edad}`;
+        // No haga e.preventDefault() - deje que el formulario redirija
+    });
     </script>
 </body>
 </html>
