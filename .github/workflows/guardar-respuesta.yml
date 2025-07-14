@@ -1,32 +1,30 @@
-name: Guardar respuesta
+name: Guardar Respuesta
 
 on:
   push:
     paths:
-      - responses-temp.json
+      - 'responses-temp.json'
 
 jobs:
-  append-response:
+  actualizar-archivo:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Clonar repositorio
+      - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Leer respuestas temporales y agregarlas a responses.json
+      - name: Obtener contenido temporal
         run: |
-          TEMP="responses-temp.json"
-          FINAL="responses.json"
-          
-          jq -s '.[0] + [.[1]]' "$FINAL" "$TEMP" > merged.json
-          mv merged.json "$FINAL"
+          TEMP_FILE="responses-temp.json"
+          if [ -f "$TEMP_FILE" ]; then
+            cat $TEMP_FILE > responses.json
+          else
+            echo "[]" > responses.json
+          fi
 
-      - name: Borrar archivo temporal
-        run: rm responses-temp.json
-
-      - name: Subir cambios
-        uses: EndBug/add-and-commit@v9
+      - name: Commit final en responses.json
+        uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          author_name: GitHub Actions
-          author_email: actions@github.com
-          message: "Nueva respuesta añadida"
+          commit_message: "Actualizar responses.json"
+          file_pattern: responses.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
