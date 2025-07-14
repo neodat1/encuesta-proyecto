@@ -1,38 +1,36 @@
-name: Guardar respuesta
+name: Guardar respuestas de encuesta
 
 on:
-  repository_dispatch:
-    types: [nueva-respuesta]
+  push:
+    paths:
+      - responses-temp.json
 
 jobs:
   actualizar-respuestas:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Clonar repositorio
-      uses: actions/checkout@v3
+      - name: Clonar repositorio
+        uses: actions/checkout@v3
 
-    - name: Configurar Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 16
+      - name: Leer archivo temporal y combinar con respuestas.json
+        run: |
+          echo "📥 Cargando respuesta temporal..."
+          cat responses-temp.json
 
-    - name: Agregar nueva respuesta
-      run: |
-        echo "Agregando nueva respuesta..."
+          echo "📁 Asegurando existencia de responses.json"
+          if [ ! -f responses.json ]; then
+            echo "[]" > responses.json
+          fi
 
-        FILE="responses.json"
-        TEMP="temp.json"
-        NOMBRE="${{ github.event.client_payload.datos.nombre }}"
-        EDAD="${{ github.event.client_payload.datos.edad }}"
-        FECHA="${{ github.event.client_payload.datos.fecha }}"
+          echo "📦 Fusionando datos..."
+          jq -s '.[0] as $new | .[1] + [$new]' responses-temp.json responses.json > merged.json
+          mv merged.json responses.json
 
-        jq --arg nombre "$NOMBRE" --arg edad "$EDAD" --arg fecha "$FECHA" \
-          '. += [{"nombre": $nombre, "edad": $edad, "fecha": $fecha}]' "$FILE" > "$TEMP"
-        mv "$TEMP" "$FILE"
+          echo "🧹 Eliminando temporal..."
+          rm responses-temp.json
 
-    - name: Commit y push
-      uses: stefanzweifel/git-auto-commit-action@v5
-      with:
-        commit_message: "Agregar nueva respuesta"
-        branch: main
+      - name: Subir cambios
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "Nueva respuesta guardada automáticamente"
