@@ -1,0 +1,32 @@
+name: Guardar respuesta
+
+on:
+  push:
+    paths:
+      - responses-temp.json
+
+jobs:
+  append-response:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Clonar repositorio
+        uses: actions/checkout@v3
+
+      - name: Leer respuestas temporales y agregarlas a responses.json
+        run: |
+          TEMP="responses-temp.json"
+          FINAL="responses.json"
+          
+          jq -s '.[0] + [.[1]]' "$FINAL" "$TEMP" > merged.json
+          mv merged.json "$FINAL"
+
+      - name: Borrar archivo temporal
+        run: rm responses-temp.json
+
+      - name: Subir cambios
+        uses: EndBug/add-and-commit@v9
+        with:
+          author_name: GitHub Actions
+          author_email: actions@github.com
+          message: "Nueva respuesta añadida"
