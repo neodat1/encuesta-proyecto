@@ -1,6 +1,4 @@
-const formulario = document.getElementById("formulario");
-
-formulario.addEventListener("submit", async (e) => {
+document.getElementById('formulario').addEventListener('submit', async (e) => {
     e.preventDefault();
 
     const datos = {
@@ -11,52 +9,52 @@ formulario.addEventListener("submit", async (e) => {
 
     const repo = "encuesta-proyecto";
     const owner = "neodat1";
-    const archivo = "responses.json";
-    const token = "ghp_XoSMFjaMNWdLtW0sj20UCac13NqMH0TSRU2";  // ⚠️ Token aquí
+    const archivo = "responses-temp.json"; // Archivo temporal que activa el flujo
+    const token = process.env.GH_TOKEN;
 
     const url = `https://api.github.com/repos/${owner}/${repo}/contents/${archivo}`;
 
+    const nuevoContenido = Buffer.from(JSON.stringify(datos, null, 2)).toString('base64');
+
     try {
-        // 1. Obtener contenido actual
-        const respuesta = await fetch(url, {
+        // Verificamos si el archivo ya existe para obtener el SHA
+        const resp = await fetch(url, {
             headers: {
                 Authorization: `Bearer ${token}`,
                 Accept: "application/vnd.github.v3+json"
             }
         });
 
-        const contenido = await respuesta.json();
-        const sha = contenido.sha;
-        const actual = JSON.parse(atob(contenido.content));
+        const existe = resp.status === 200;
+        let sha = null;
 
-        // 2. Agregar nueva entrada
-        actual.push(datos);
+        if (existe) {
+            const json = await resp.json();
+            sha = json.sha;
+        }
 
-        // 3. Subir nuevo contenido
-        const nuevoContenido = btoa(JSON.stringify(actual, null, 2));
-
-        const subir = await fetch(url, {
+        // Subir el nuevo archivo (o reemplazar si ya existía)
+        const subida = await fetch(url, {
             method: "PUT",
             headers: {
                 Authorization: `Bearer ${token}`,
                 Accept: "application/vnd.github.v3+json"
             },
             body: JSON.stringify({
-                message: "Agregar nueva respuesta",
+                message: "Nueva respuesta temporal",
                 content: nuevoContenido,
                 sha: sha
             })
         });
 
-        if (subir.ok) {
-            alert("✅ Datos enviados correctamente");
-            formulario.reset();
+        if (subida.ok) {
+            alert("¡Datos guardados!");
         } else {
-            alert("❌ Error al guardar en GitHub");
+            alert("Error al guardar los datos");
         }
 
     } catch (error) {
-        console.error(error);
-        alert("❌ Error en la operación");
+        console.error("Error:", error);
+        alert("Ocurrió un error.");
     }
 });
